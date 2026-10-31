@@ -25,8 +25,8 @@ module Program =
     let main args =
 
         let builder = WebApplication.CreateBuilder(args)
+        builder.Services.AddAuthentication();
 
-        builder.Services.AddControllers()
         builder.Services.AddEndpointsApiExplorer()
         builder.Services.AddSwaggerGen()
 
@@ -41,25 +41,33 @@ module Program =
             app.UseSwagger() |> ignore
             app.UseSwaggerUI() |> ignore
 
-        app.UseAuthorization()
         
         app.MapGet("/mini",Func<string>(fun ()->"srtrtrt"))|>ignore
         app.MapGet("/boo/{par}",Func<string,HelloService,string>(fun par hello ->hello.hello par))|>ignore
-        app.MapGet("/products",Func<ProductService,Task<Results<Ok<DB.Product list>,NotFound>>>(fun products ->
+        app.MapGet("/products",Func<ProductService,Task<Results<Ok<DB.Product list>,_>>>(fun products ->
         task{
             let! list=products.list()
             return from(TypedResults.Ok(list))
-            }
-            ))|>ignore
+            }))
+        |>ignore
 
         
         app.MapGet("/items/{id}",
-            Func<int, ProductService, Task<Results<Ok<DB.Product>, NotFound>>>(fun id products ->
+            Func<int,ProductService, Task<Results<Ok<DB.Product>, NotFound>>>(fun id products ->
                 task{
                     let! item=products.get id 
                     match item with
                     | Some item -> return from(TypedResults.Ok item)
                     | None      -> return from(TypedResults.NotFound())
+                }))
+        |> ignore
+
+        
+        app.MapPut("/items",
+            Func<DB.ProductInputDTO,ProductService, Task<Results<Ok<DB.Product>, _>>>(fun input products ->
+                task{
+                    let! newProduct=products.add input
+                    return from(TypedResults.Ok(newProduct))
                 }))
         |> ignore
 
