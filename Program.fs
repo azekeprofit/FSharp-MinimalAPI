@@ -47,7 +47,7 @@ module Program =
         app.MapGet("/products",Func<ProductService,Task<Results<Ok<DB.Product list>,_>>>(fun products ->
         task{
             let! list=products.list()
-            return from(TypedResults.Ok(list))
+            return list|>Typed.Ok
             }))
         |>ignore
 
@@ -57,8 +57,8 @@ module Program =
                 task{
                     let! item=products.get id 
                     match item with
-                    | Some item -> return from(TypedResults.Ok item)
-                    | None      -> return from(TypedResults.NotFound())
+                    | Some item -> return item|>Typed.Ok
+                    | None      -> return Typed.NotFound()
                 }))
         |> ignore
 
@@ -67,7 +67,7 @@ module Program =
             Func<DB.ProductInputDTO,ProductService, Task<Results<Ok<DB.Product>, _>>>(fun input products ->
                 task{
                     let! newProduct=products.add input
-                    return from(TypedResults.Ok(newProduct))
+                    return $"/items/{newProduct.Id}"|>Typed.CreatedAt
                 }))
         |> ignore
 
