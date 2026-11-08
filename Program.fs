@@ -17,6 +17,11 @@ open Microsoft.AspNetCore.Http
 open Microsoft.AspNetCore.Http.HttpResults // Contains Ok<T>, NotFound, etc.
 open Swashbuckle.AspNetCore.SwaggerUI
 open Swashbuckle.AspNetCore
+open Dapper
+open FluentMigrator
+open FluentMigrator.Runner
+open Microsoft.Data.Sqlite
+
 
 module Program =
     let exitCode = 0
@@ -25,14 +30,16 @@ module Program =
     let main args =
 
         let builder = WebApplication.CreateBuilder(args)
-        builder.Services.AddAuthentication();
+        builder.Services.AddAuthentication()
 
         builder.Services.AddEndpointsApiExplorer()
         builder.Services.AddSwaggerGen()
 
         builder.Services.AddScoped<HelloService>()
         builder.Services.AddScoped<ProductService>()
-        builder.Services.AddOpenApi() |> ignore   
+        builder.Services.AddOpenApi() |> ignore
+
+        DB.migrate builder.Services
 
         let app = builder.Build()
 
@@ -41,7 +48,7 @@ module Program =
             app.UseSwagger() |> ignore
             app.UseSwaggerUI() |> ignore
 
-        
+
         app.MapGet("/mini",Func<string>(fun ()->"srtrtrt"))|>ignore
         app.MapGet("/boo/{par}",Func<string,HelloService,string>(fun par hello ->hello.hello par))|>ignore
         app.MapGet("/products",Func<ProductService,Task<Results<Ok<DB.Product list>,_>>>(fun products ->
@@ -51,18 +58,18 @@ module Program =
             }))
         |>ignore
 
-        
+
         app.MapGet("/items/{id}",
             Func<int,ProductService, Task<Results<Ok<DB.Product>, NotFound>>>(fun id products ->
                 task{
-                    let! item=products.get id 
+                    let! item=products.get id
                     match item with
                     | Some item -> return item|>Typed.Ok
                     | None      -> return Typed.NotFound()
                 }))
         |> ignore
 
-        
+
         app.MapPut("/items",
             Func<DB.ProductInputDTO,ProductService, Task<Results<Ok<DB.Product>, _>>>(fun input products ->
                 task{
