@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="helper.fs" />
+    <Compile Include="typed.fs" />
     <Compile Include="migrations\create.fs" />
     <Compile Include="db.fs" />
     <Compile Include="Services.fs" />

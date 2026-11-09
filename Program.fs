@@ -10,6 +10,7 @@ open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
+open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Builder
@@ -63,9 +64,9 @@ module Program =
             Func<int,ProductService, Task<Results<Ok<DB.Product>, NotFound>>>(fun id products ->
                 task{
                     let! item=products.get id
-                    match item with
-                    | Some item -> return item|>Typed.Ok
-                    | None      -> return Typed.NotFound()
+                    return match item with
+                            | Some item -> item|>Typed.Ok
+                            | None      -> Typed.NotFound()
                 }))
         |> ignore
 
@@ -75,6 +76,16 @@ module Program =
                 task{
                     let! newProduct=products.add input
                     return $"/items/{newProduct.Id}"|>Typed.CreatedAt
+                }))
+        |> ignore
+
+        app.MapPost("/items",
+            Func<DB.Product,ProductService, Task<Results<Ok,ProblemHttpResult>>>(fun input products ->
+                task{
+                    let! result=products.update input
+                    return match result with
+                            | 1 -> Typed.JustOk()
+                            | other -> Typed.Problem(ProblemDetails(Detail=$"unexpected number of updated rows: {other}"))
                 }))
         |> ignore
 

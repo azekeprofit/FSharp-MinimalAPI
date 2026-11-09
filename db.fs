@@ -41,16 +41,19 @@ let createConnection() = new SqliteConnection(connectionString())
 type ProductService()=
     member _.list()=
         task{
-            use conn=createConnection()
-            return! conn.QueryAsync<Product> "Select * from Products" }
-
+        use conn=createConnection()
+        return! conn.QueryAsync<Product> "Select * from Products" }
     member _.get id=
-            task {
-            use conn=createConnection()
-            let! result=conn.QueryFirstOrDefaultAsync<Product>("Select * from Products where id=@id",{| id=id |})
-            return Option.ofObj result }
+        task {
+        use conn=createConnection()
+        let! result=conn.QueryFirstOrDefaultAsync<Product>("Select * from Products where id=@id",{| id=id |})
+        return Option.ofObj result }
     member _.add (input:ProductInputDTO)=
-            task {
-                use conn=createConnection()
-                let! newId=conn.QuerySingleAsync<int64>("INSERT INTO Products (Name) VALUES (@Name) returning id", input)
-                return makeProduct newId input }
+        task {
+        use conn=createConnection()
+        let! newId=conn.QuerySingleAsync<int64>("INSERT INTO Products (Name) VALUES (@Name) returning id", input)
+        return makeProduct newId input }
+    member _.update (input:Product)=
+        task {
+        use conn=createConnection()
+        return! conn.ExecuteAsync("UPDATE Products SET Name = @Name WHERE Id = @Id", input) }
