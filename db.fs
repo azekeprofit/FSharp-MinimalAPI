@@ -5,6 +5,15 @@ open FluentMigrator
 open Dapper
 open Microsoft.Data.Sqlite
 open FluentMigrator.Runner
+open System.ComponentModel.DataAnnotations;
+
+
+type ProductInputDTO={ Name:string }
+type Product={ [<Key>] Id:int64; Name:string }
+
+let makeProduct id (inputProduct:ProductInputDTO)=
+    { Id=id; Name=inputProduct.Name}
+
 
 let connectionString() =
     match System.Environment.GetEnvironmentVariable("DATABASE") with
@@ -27,32 +36,21 @@ let migrate (services:IServiceCollection) =
         let migrationRunner = ServiceProviderServiceExtensions.GetRequiredService<IMigrationRunner> scope.ServiceProvider
         migrationRunner.MigrateUp()
 
-let openConnection() =
-    use connection = new SqliteConnection(connectionString())
-    connection.Open()
-    connection
-
-type ProductInputDTO={ Name:string }
-type Product={ Id:int64; Name:string }
-
-let makeProduct id (inputProduct:ProductInputDTO)=
-    { Id=id; Name=inputProduct.Name}
-
-
+let createConnection() = new SqliteConnection(connectionString())
 
 type ProductService()=
     member _.list()=
         task{
-            use conn=openConnection()
+            use conn=createConnection()
             return! conn.QueryAsync<Product> "Select * from Products" }
 
     member _.get id=
             task {
-            use conn=openConnection()
+            use conn=createConnection()
             let! result=conn.QueryFirstOrDefaultAsync<Product>("Select * from Products where id=@id",{| id=id |})
             return Option.ofObj result }
     member _.add (input:ProductInputDTO)=
             task {
-                use conn=openConnection()
-                let! newId=conn.ExecuteAsync("INSERT INTO Products (Name) VALUES (@Name) returning id", input)
+                use conn=createConnection()
+                let! newId=conn.QuerySingleAsync<int64>("INSERT INTO Products (Name) VALUES (@Name) returning id", input)
                 return makeProduct newId input }
